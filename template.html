@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Free Classroom Finder &middot; 2026-27 ODD</title>
+<style>
+  :root{
+    --bg:#0f172a; --panel:#1e293b; --panel2:#273449; --line:#334155;
+    --txt:#e2e8f0; --muted:#94a3b8; --accent:#38bdf8; --free:#22c55e; --busy:#475569;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Segoe UI",system-ui,Arial,sans-serif;background:var(--bg);color:var(--txt)}
+  header{padding:20px 24px;border-bottom:1px solid var(--line);background:linear-gradient(90deg,#0f172a,#11203b)}
+  header h1{margin:0;font-size:20px;font-weight:650}
+  header p{margin:4px 0 0;color:var(--muted);font-size:13px}
+  .wrap{display:grid;grid-template-columns:320px 1fr;gap:0;min-height:calc(100vh - 78px)}
+  .controls{padding:20px;border-right:1px solid var(--line);background:var(--panel)}
+  .results{padding:20px;overflow:auto}
+  .grp{margin-bottom:18px}
+  .grp h3{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+  label.fl{display:block;font-size:12px;color:var(--muted);margin:14px 0 5px;text-transform:uppercase;letter-spacing:.05em}
+  select,button{font:inherit}
+  select{width:100%;padding:9px 10px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--txt)}
+  .modes{display:flex;gap:6px;flex-wrap:wrap}
+  .modes button{flex:1;padding:8px 6px;border:1px solid var(--line);background:var(--panel2);color:var(--muted);border-radius:8px;cursor:pointer;font-size:12px}
+  .modes button.active{background:var(--accent);color:#06283d;border-color:var(--accent);font-weight:650}
+  .days{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+  .days button{padding:9px 0;border:1px solid var(--line);background:var(--panel2);color:var(--txt);border-radius:8px;cursor:pointer;font-size:13px}
+  .days button.active{background:var(--accent);color:#06283d;border-color:var(--accent);font-weight:700}
+  .checks{max-height:150px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:8px;background:var(--panel2)}
+  .checks label{display:flex;align-items:center;gap:8px;font-size:13px;padding:3px 0;cursor:pointer}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  #go{width:100%;margin-top:18px;padding:12px;border:none;border-radius:9px;background:var(--free);color:#04210f;font-weight:700;cursor:pointer;font-size:14px}
+  #go:hover{filter:brightness(1.08)}
+  .summary{margin:0 0 16px;font-size:14px;color:var(--muted)}
+  .summary b{color:var(--txt)}
+  .bld{margin-bottom:20px;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .bld-head{display:flex;justify-content:space-between;align-items:center;padding:11px 15px;background:var(--panel2)}
+  .bld-head .nm{font-weight:650}
+  .bld-head .ct{font-size:12px;color:var(--muted)}
+  .badge{display:inline-block;font-size:11px;background:#0c4a6e;color:#bae6fd;padding:2px 8px;border-radius:20px;margin-left:8px}
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;padding:14px}
+  .card{border:1px solid var(--line);border-radius:10px;padding:11px 12px;background:var(--panel)}
+  .card .rn{font-size:16px;font-weight:700;color:var(--free)}
+  .card .rt{font-size:11px;color:var(--muted);margin-top:3px;min-height:14px}
+  .slots{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+  .slots span{font-size:10px;background:var(--panel2);border:1px solid var(--line);color:var(--muted);padding:2px 6px;border-radius:5px}
+  .empty{color:var(--muted);text-align:center;padding:60px 20px}
+  .empty .big{font-size:42px;margin-bottom:8px}
+  a.cl{color:var(--accent);text-decoration:none}
+  .upload{display:inline-block;padding:9px 14px;border:1px solid var(--accent);color:var(--accent);border-radius:8px;cursor:pointer;font-size:13px;font-weight:600}
+  .upload:hover{background:var(--accent);color:#06283d}
+  @media(max-width:760px){.wrap{grid-template-columns:1fr}.controls{border-right:none;border-bottom:1px solid var(--line)}}
+</style>
+</head>
+<body>
+<header>
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
+    <div>
+      <h1>🏫 Free Classroom Finder</h1>
+      <p id="subtitle">Pick a day &amp; time to see which rooms are free, and in which building.</p>
+    </div>
+    <div style="text-align:right">
+      <label for="xlsxInput" class="upload">📂 Load a different Excel</label>
+      <input type="file" id="xlsxInput" accept=".xlsx,.xls" style="display:none" />
+      <div id="loadStatus" style="font-size:12px;color:var(--muted);margin-top:6px"></div>
+    </div>
+  </div>
+</header>
+<div class="wrap">
+  <aside class="controls">
+    <div class="grp">
+      <h3>1 · Day</h3>
+      <div class="days" id="days"></div>
+    </div>
+    <div class="grp">
+      <h3>2 · When</h3>
+      <div class="modes" id="modes">
+        <button data-mode="single" class="active">Single slot</button>
+        <button data-mode="range">Time range</button>
+        <button data-mode="allday">Whole day</button>
+      </div>
+      <div id="singleBox">
+        <label class="fl">Time slot</label>
+        <select id="slotSingle"></select>
+      </div>
+      <div id="rangeBox" style="display:none">
+        <div class="row2">
+          <div><label class="fl">From</label><select id="slotFrom"></select></div>
+          <div><label class="fl">To</label><select id="slotTo"></select></div>
+        </div>
+      </div>
+      <div id="alldayBox" style="display:none">
+        <p style="font-size:12px;color:var(--muted)">Shows rooms with <b>no class all day</b>.</p>
+      </div>
+    </div>
+    <div class="grp">
+      <h3>3 · Filters</h3>
+      <label class="fl">Buildings</label>
+      <div class="checks" id="bldChecks"></div>
+      <label class="fl">Room type</label>
+      <select id="typeFilter"><option value="">All types</option></select>
+    </div>
+    <button id="go">Find free rooms</button>
+  </aside>
+  <main class="results" id="results">
+    <div class="empty"><div class="big">🔎</div>Choose a day and time, then hit <b>Find free rooms</b>.</div>
+  </main>
+</div>
+
+<script id="data" type="application/json">/*__DATA__*/</script>
+<script src="lib/xlsx.full.min.js"></script>
+<script>
+const DAYNAME = {MON:'Monday',TUE:'Tuesday',WED:'Wednesday',THU:'Thursday',FRI:'Friday',SAT:'Saturday'};
+let DATA = JSON.parse(document.getElementById('data').textContent);
+let state = {day:'MON', mode:'single'};
+
+/* =========================================================================
+   In-browser Excel parser — mirrors parse_rooms.py so an uploaded workbook
+   produces the exact same data shape: {days, slots, buildings, rooms}.
+   ========================================================================= */
+const DAYS = ["MON","TUE","WED","THU","FRI","SAT"];
+const CANONICAL = [
+  ["08:00-09:00",8],["09:00-10:00",9],["10:00-11:00",10],["11:00-12:00",11],
+  ["12:00-13:00",12],["13:00-14:00",13],["14:00-15:00",14],["15:00-16:00",15],
+  ["16:00-17:00",16],["17:00-18:00",17],["18:00-19:00",18],
+];
+const CANON_LABELS = CANONICAL.map(c=>c[0]);
+
+function clean(v){return v==null?'':String(v).split(/\s+/).join(' ').trim();}
+function normTime(raw){
+  if(raw==null) return null;
+  const s=String(raw).replace(/\s+/g,'');
+  const m=s.match(/^(\d{1,2}):\d{2}-(\d{1,2}):\d{2}/);
+  if(!m) return null;
+  let start=parseInt(m[1],10);
+  if(start<8) start+=12;
+  for(const [label,hr] of CANONICAL) if(hr===start) return label;
+  return null;
+}
+function parseRoomHeader(text){
+  let t=clean(text).replace(/^Room No\.?/i,'').trim();
+  let num=''; const m=t.match(/\b(\d{2,4}[A-Za-z]?)\b/); if(m) num=m[1];
+  let rtype='';
+  const groups=t.match(/\(([^()]*)\)/g)||[];
+  for(const g of groups){const inner=g.slice(1,-1); if(/room|lab/i.test(inner)){rtype=inner.trim();break;}}
+  return {num,rtype,full:t};
+}
+function shortBuilding(name){
+  name=clean(name);
+  const m=name.match(/\(([^()]*)\)/);
+  const code=m?m[1]:name;
+  const base=name.replace(/\([^()]*\)/g,'').trim();
+  return {base,code};
+}
+function parseWorkbook(arrayBuffer){
+  const wb=XLSX.read(arrayBuffer,{type:'array'});
+  const buildings=[], rooms=[]; let rid=0;
+  for(const sheet of wb.SheetNames){
+    if(sheet.toUpperCase().includes('INTERNSHIP')) continue;
+    const grid=XLSX.utils.sheet_to_json(wb.Sheets[sheet],{header:1,raw:true,defval:null});
+    const {base,code}=shortBuilding(sheet);
+    // header rows in column A starting with "room no"
+    const headerRows=[];
+    for(let r=0;r<grid.length;r++){
+      const a=clean((grid[r]||[])[0]);
+      if(a.toLowerCase().startsWith('room no')) headerRows.push(r);
+    }
+    if(!headerRows.length) continue;
+    buildings.push({name:base,code,sheet});
+    headerRows.push(grid.length); // sentinel
+    for(let i=0;i<headerRows.length-1;i++){
+      const start=headerRows[i], end=headerRows[i+1];
+      const {num,rtype,full}=parseRoomHeader((grid[start]||[])[0]);
+      // column -> time using the 'Days' row in this block
+      const colTime={};
+      for(let r=start;r<end;r++){
+        const a=clean((grid[r]||[])[0]);
+        if(a.toLowerCase()==='days'){
+          const row=grid[r]||[];
+          for(let c=1;c<row.length;c++){const nt=normTime(row[c]); if(nt) colTime[c]=nt;}
+          break;
+        }
+      }
+      if(!Object.keys(colTime).length){for(let c=1;c<=11;c++) colTime[c]=CANON_LABELS[c-1];}
+      const schedule={}; DAYS.forEach(d=>{schedule[d]={}; CANON_LABELS.forEach(l=>schedule[d][l]='');});
+      for(let r=start;r<end;r++){
+        const a=clean((grid[r]||[])[0]).toUpperCase();
+        if(DAYS.includes(a)){
+          const row=grid[r]||[];
+          for(const c in colTime) schedule[a][colTime[c]]=clean(row[c]);
+        }
+      }
+      rid++;
+      rooms.push({id:rid,building:base,buildingCode:code,number:num,type:rtype,label:full,schedule});
+    }
+  }
+  return {generated:'uploaded file',days:DAYS,slots:CANON_LABELS,buildings,rooms};
+}
+
+/* ---- build / rebuild all controls from DATA ---- */
+const daysEl=document.getElementById('days');
+const modesEl=document.getElementById('modes');
+const bldChecks=document.getElementById('bldChecks');
+const tf=document.getElementById('typeFilter');
+
+function buildUI(){
+  // day buttons
+  daysEl.innerHTML='';
+  DATA.days.forEach((d,i)=>{
+    const b=document.createElement('button'); b.textContent=d; b.dataset.day=d;
+    if(i===0){b.classList.add('active');state.day=d;}
+    b.onclick=()=>{state.day=d;[...daysEl.children].forEach(x=>x.classList.remove('active'));b.classList.add('active');};
+    daysEl.appendChild(b);
+  });
+  // time slot dropdowns
+  ['slotSingle','slotFrom','slotTo'].forEach(id=>{
+    const sel=document.getElementById(id); sel.innerHTML='';
+    DATA.slots.forEach((s,i)=>{const o=document.createElement('option');o.value=i;o.textContent=s;sel.appendChild(o);});
+  });
+  document.getElementById('slotTo').value=DATA.slots.length-1;
+  // buildings
+  bldChecks.innerHTML='';
+  DATA.buildings.forEach(b=>{
+    const l=document.createElement('label');
+    l.innerHTML=`<input type="checkbox" value="${b.code}" checked> ${b.name} <span style="color:var(--muted)">(${b.code})</span>`;
+    bldChecks.appendChild(l);
+  });
+  // room types
+  tf.innerHTML='<option value="">All types</option>';
+  [...new Set(DATA.rooms.map(r=>r.type).filter(Boolean))].sort()
+    .forEach(t=>{const o=document.createElement('option');o.value=t;o.textContent=t;tf.appendChild(o);});
+}
+
+modesEl.onclick=e=>{const b=e.target.closest('button');if(!b)return;
+  state.mode=b.dataset.mode;[...modesEl.children].forEach(x=>x.classList.remove('active'));b.classList.add('active');
+  document.getElementById('singleBox').style.display = state.mode==='single'?'':'none';
+  document.getElementById('rangeBox').style.display  = state.mode==='range'?'':'none';
+  document.getElementById('alldayBox').style.display = state.mode==='allday'?'':'none';
+};
+
+/* ---- file upload ---- */
+const statusEl=document.getElementById('loadStatus');
+document.getElementById('xlsxInput').onchange=e=>{
+  const file=e.target.files[0]; if(!file) return;
+  statusEl.textContent='Reading '+file.name+' …'; statusEl.style.color='var(--accent)';
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    try{
+      const data=parseWorkbook(ev.target.result);
+      if(!data.rooms.length) throw new Error('No room timetables found in this file.');
+      DATA=data; buildUI();
+      document.getElementById('results').innerHTML='<div class="empty"><div class="big">✅</div>Loaded <b>'+data.rooms.length+'</b> rooms from <b>'+file.name+'</b>. Choose a day &amp; time, then search.</div>';
+      document.getElementById('subtitle').textContent='Loaded from: '+file.name;
+      statusEl.textContent='✓ '+data.rooms.length+' rooms · '+data.buildings.length+' buildings'; statusEl.style.color='var(--free)';
+    }catch(err){
+      statusEl.textContent='⚠ '+err.message; statusEl.style.color='#f87171';
+    }
+  };
+  reader.onerror=()=>{statusEl.textContent='⚠ Could not read file.'; statusEl.style.color='#f87171';};
+  reader.readAsArrayBuffer(file);
+};
+
+// ---- search ----
+function isFree(room,day,idxs){return idxs.every(i=>!room.schedule[day][DATA.slots[i]]);}
+
+function search(){
+  const day=state.day;
+  let idxs;
+  if(state.mode==='single') idxs=[+document.getElementById('slotSingle').value];
+  else if(state.mode==='range'){let a=+document.getElementById('slotFrom').value,b=+document.getElementById('slotTo').value;if(a>b)[a,b]=[b,a];idxs=[];for(let i=a;i<=b;i++)idxs.push(i);}
+  else idxs=DATA.slots.map((_,i)=>i);
+
+  const okB=new Set([...bldChecks.querySelectorAll('input:checked')].map(c=>c.value));
+  const ty=tf.value;
+  const hits=DATA.rooms.filter(r=>okB.has(r.buildingCode) && (!ty||r.type===ty) && isFree(r,day,idxs));
+  render(hits,day,idxs);
+}
+
+function slotText(idxs){
+  if(state.mode==='allday')return 'all day';
+  if(idxs.length===1)return DATA.slots[idxs[0]];
+  return DATA.slots[idxs[0]].split('-')[0]+' – '+DATA.slots[idxs[idxs.length-1]].split('-')[1];
+}
+
+function render(hits,day,idxs){
+  const res=document.getElementById('results');
+  if(!hits.length){res.innerHTML=`<div class="empty"><div class="big">🚫</div>No free rooms on <b>${DAYNAME[day]}</b> for <b>${slotText(idxs)}</b> with the current filters.</div>`;return;}
+  const byB={};
+  hits.forEach(r=>{(byB[r.buildingCode]=byB[r.buildingCode]||{name:r.building,rooms:[]}).rooms.push(r);});
+  let html=`<p class="summary"><b>${hits.length}</b> free room${hits.length>1?'s':''} on <b>${DAYNAME[day]}</b>, <b>${slotText(idxs)}</b>, across <b>${Object.keys(byB).length}</b> building${Object.keys(byB).length>1?'s':''}.</p>`;
+  Object.keys(byB).sort().forEach(code=>{
+    const g=byB[code];
+    html+=`<div class="bld"><div class="bld-head"><span class="nm">${g.name}<span class="badge">${code}</span></span><span class="ct">${g.rooms.length} free</span></div><div class="cards">`;
+    g.rooms.sort((a,b)=>(a.number||'').localeCompare(b.number||'',undefined,{numeric:true})).forEach(r=>{
+      let extra='';
+      if(state.mode!=='single'){const f=idxs.filter(i=>!r.schedule[day][DATA.slots[i]]);extra=`<div class="slots">${f.map(i=>`<span>${DATA.slots[i]}</span>`).join('')}</div>`;}
+      html+=`<div class="card"><div class="rn">Room ${r.number||'—'}</div><div class="rt">${r.type||''}</div>${extra}</div>`;
+    });
+    html+=`</div></div>`;
+  });
+  res.innerHTML=html;
+}
+document.getElementById('go').onclick=search;
+
+// initial render of controls from embedded data
+buildUI();
+</script>
+</body>
+</html>
