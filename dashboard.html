@@ -28,6 +28,10 @@
   .days{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
   .days button{padding:9px 0;border:1px solid var(--line);background:var(--panel2);color:var(--txt);border-radius:8px;cursor:pointer;font-size:13px}
   .days button.active{background:var(--accent);color:#06283d;border-color:var(--accent);font-weight:700}
+  .fl-row{display:flex;align-items:flex-end;justify-content:space-between;margin:14px 0 5px}
+  .fl-row .fl{margin:0}
+  .selall{background:none;border:none;color:var(--accent);font-size:11px;cursor:pointer;padding:0;text-transform:uppercase;letter-spacing:.05em}
+  .selall:hover{text-decoration:underline}
   .checks{max-height:150px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:8px;background:var(--panel2)}
   .checks label{display:flex;align-items:center;gap:8px;font-size:13px;padding:3px 0;cursor:pointer}
   .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
@@ -58,7 +62,7 @@
 <header>
   <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
     <div>
-      <h1>🏫 Free Classroom Finder</h1>
+      <h1>CSE-AI Free Classroom Finder</h1>
       <p id="subtitle">Pick a day &amp; time to see which rooms are free, and in which building.</p>
     </div>
     <div style="text-align:right">
@@ -97,10 +101,10 @@
     </div>
     <div class="grp">
       <h3>3 · Filters</h3>
-      <label class="fl">Buildings</label>
+      <div class="fl-row"><label class="fl">Buildings</label><button type="button" class="selall" id="bldAll">Select all</button></div>
       <div class="checks" id="bldChecks"></div>
-      <label class="fl">Room type</label>
-      <select id="typeFilter"><option value="">All types</option></select>
+      <div class="fl-row"><label class="fl">Room type</label><button type="button" class="selall" id="typeAll">Select all</button></div>
+      <div class="checks" id="typeChecks"></div>
     </div>
     <button id="go">Find free rooms</button>
   </aside>
@@ -227,7 +231,19 @@ function parseWorkbook(arrayBuffer){
 const daysEl=document.getElementById('days');
 const modesEl=document.getElementById('modes');
 const bldChecks=document.getElementById('bldChecks');
-const tf=document.getElementById('typeFilter');
+const typeChecks=document.getElementById('typeChecks');
+
+/* toggle-all helper: sets every checkbox in `box` and flips the button label */
+function wireSelectAll(btn,box){
+  btn.onclick=()=>{
+    const boxes=[...box.querySelectorAll('input[type=checkbox]')];
+    const makeAll=boxes.some(c=>!c.checked); // if any unchecked -> check all, else clear
+    boxes.forEach(c=>c.checked=makeAll);
+    btn.textContent=makeAll?'Clear all':'Select all';
+  };
+}
+wireSelectAll(document.getElementById('bldAll'),bldChecks);
+wireSelectAll(document.getElementById('typeAll'),typeChecks);
 
 function buildUI(){
   // day buttons
@@ -252,9 +268,15 @@ function buildUI(){
     bldChecks.appendChild(l);
   });
   // room types
-  tf.innerHTML='<option value="">All types</option>';
+  typeChecks.innerHTML='';
   [...new Set(DATA.rooms.map(r=>r.type).filter(Boolean))].sort()
-    .forEach(t=>{const o=document.createElement('option');o.value=t;o.textContent=t;tf.appendChild(o);});
+    .forEach(t=>{
+      const l=document.createElement('label');
+      l.innerHTML=`<input type="checkbox" value="${t}" checked> ${t}`;
+      typeChecks.appendChild(l);
+    });
+  document.getElementById('bldAll').textContent='Clear all';
+  document.getElementById('typeAll').textContent='Clear all';
 }
 
 modesEl.onclick=e=>{const b=e.target.closest('button');if(!b)return;
@@ -297,8 +319,9 @@ function search(){
   else idxs=DATA.slots.map((_,i)=>i);
 
   const okB=new Set([...bldChecks.querySelectorAll('input:checked')].map(c=>c.value));
-  const ty=tf.value;
-  const hits=DATA.rooms.filter(r=>okB.has(r.buildingCode) && (!ty||r.type===ty) && isFree(r,day,idxs));
+  const okT=new Set([...typeChecks.querySelectorAll('input:checked')].map(c=>c.value));
+  const hasTypes=typeChecks.querySelector('input')!==null; // any type filter present?
+  const hits=DATA.rooms.filter(r=>okB.has(r.buildingCode) && (!hasTypes||okT.has(r.type)) && isFree(r,day,idxs));
   render(hits,day,idxs);
 }
 
